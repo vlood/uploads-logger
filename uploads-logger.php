@@ -39,6 +39,7 @@ class UploadsLogger {
 	 *--------------------------------------------*/
 	const name = 'Uploads Logger';
 	const slug = 'uploads_logger';
+	const usermeta_key = 'uploads_history';
 	
 	/**
 	 * Constructor
@@ -94,13 +95,26 @@ class UploadsLogger {
 		// TODO define your filter method here
 	}
 
-	function render_shortcode($atts) {
-		// Extract the attributes
-		extract(shortcode_atts(array(
-			'attr1' => 'foo', //foo is a default value
-			'attr2' => 'bar'
-			), $atts));
-		// you can now access the attribute values using $attr1 and $attr2
+	function render_shortcode( $atts ) {
+		if ( !is_user_logged_in() ) {
+			return __( 'You need to be logged in, to see your uploads history', self::slug );
+		}
+		
+		$user_id = get_current_user_id();
+		
+		$users_upload_entries = get_user_meta( $user_id, $usermeta_key, false );
+		
+		if(empty($users_upload_entries)){
+			return __( 'You haven\'t uploaded anything lately!', self::slug );
+		}
+		
+		$result = '';
+		
+		foreach ( $users_upload_entries as $timestamp -> $filename ){
+			$result .= $filename . ' - ' . __( 'upload date: ', self::slug ) . $timestamp . '<br/>';
+		}
+		
+		return $result;
 	}
   
 	/**
