@@ -65,26 +65,11 @@ class UploadsLogger {
 	function init_uploads_logger() {
 		// Setup localization
 		load_plugin_textdomain( self::slug, false, dirname( plugin_basename( __FILE__ ) ) . '/lang' );
-		// Load JavaScript and stylesheets
-		$this->register_scripts_and_styles();
 
 		// Register the shortcode [my-uploads-log]
 		add_shortcode( 'my-uploads-log', array( &$this, 'render_shortcode' ) );
-	
-		if ( is_admin() ) {
-			//this will run when in the WordPress admin
-		} else {
-			//this will run when on the frontend
-		}
 
-		/*
-		 * TODO: Define custom functionality for your plugin here
-		 *
-		 * For more information: 
-		 * http://codex.wordpress.org/Plugin_API#Hooks.2C_Actions_and_Filters
-		 */
-		add_action( 'your_action_here', array( &$this, 'action_callback_method_name' ) );
-		add_filter( 'your_filter_here', array( &$this, 'filter_callback_method_name' ) );    
+		add_action( 'add_attachment', array( &$this, 'add_new_metauser_entry' ) );
 	}
 
 	function action_callback_method_name() {
@@ -102,58 +87,37 @@ class UploadsLogger {
 		
 		$user_id = get_current_user_id();
 		
-		$users_upload_entries = get_user_meta( $user_id, $usermeta_key, false );
+		$users_upload_entries = get_user_meta( $user_id, self::slug, false );
 		
 		if(empty($users_upload_entries)){
 			return __( 'You haven\'t uploaded anything lately!', self::slug );
 		}
 		
-		$result = '';
+		$result = '<table>';
 		
-		foreach ( $users_upload_entries as $timestamp -> $filename ){
-			$result .= $filename . ' - ' . __( 'upload date: ', self::slug ) . $timestamp . '<br/>';
+		foreach ( $users_upload_entries as $time_file_pairs ){
+			if ( sizeof( $time_file_pairs ) == 2 ) { 
+				$result .= '<tr><td>' . $time_file_pairs[0] . '</td><td>' . $time_file_pairs[1] . '</td></tr>';
+			}
 		}
+		$result .= '</table>';
 		
 		return $result;
 	}
-  
-	/**
-	 * Registers and enqueues stylesheets for the administration panel and the
-	 * public facing site.
-	 */
-	private function register_scripts_and_styles() {
-		if ( is_admin() ) {
-			$this->load_file( self::slug . '-admin-script', '/js/admin.js', true );
-			$this->load_file( self::slug . '-admin-style', '/css/admin.css' );
-		} else {
-			$this->load_file( self::slug . '-script', '/js/widget.js', true );
-			$this->load_file( self::slug . '-style', '/css/widget.css' );
-		} // end if/else
-	} // end register_scripts_and_styles
 	
-	/**
-	 * Helper function for registering and enqueueing scripts and styles.
-	 *
-	 * @name	The 	ID to register with WordPress
-	 * @file_path		The path to the actual file
-	 * @is_script		Optional argument for if the incoming file_path is a JavaScript source file.
-	 */
-	private function load_file( $name, $file_path, $is_script = false ) {
-
-		$url = plugins_url($file_path, __FILE__);
-		$file = plugin_dir_path(__FILE__) . $file_path;
-
-		if( file_exists( $file ) ) {
-			if( $is_script ) {
-				wp_register_script( $name, $url, array('jquery') ); //depends on jquery
-				wp_enqueue_script( $name );
-			} else {
-				wp_register_style( $name, $url );
-				wp_enqueue_style( $name );
-			} // end if
-		} // end if
-
-	} // end load_file
+	function add_new_metauser_entry( $attachment_id ) {
+		
+		if ( !is_user_logged_in() ) {
+			return; //whaaaat?! Anonymous user uploading files?!
+		}
+		
+		$user_id = get_current_user_id();
+		
+		$attachment_path = basename( get_attached_file( $attachment_id ) );
+		
+		add_user_meta( $user_id, self::slug, array( date( 'Y-m-d H:i' ), $attachment_path ), false );
+		
+	}
   
 } // end class
 new UploadsLogger();
