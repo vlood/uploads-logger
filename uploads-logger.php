@@ -115,6 +115,8 @@ class UploadsLogger {
 		
 		$attachment_path = basename( get_attached_file( $attachment_id ) );
 		
+		date_default_timezone_set('EET');
+		
 		add_user_meta( $user_id, self::slug, array( date( 'Y-m-d H:i' ), $attachment_path ), false );
 		
 	}
